@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Document</title>
+  <script src="script.js"></script>
+  <link rel="stylesheet" href="style.css">
+</head>
+
+<body onload="fetchPokes()">
+  <header>  
+    <input 
+    type="text" 
+    id="searchInput" 
+    placeholder="🔍 Pokémon suchen..." 
+    oninput="searchPokemon()"
+    >
+  </header>
+
+  <main id="main">
+
+  </main>
+  <button onclick="fetchPokes()">LoadMore</button>
+  <footer></footer>
+  <section id="overlay">
+    <div  onclick="event.stopPropagation()">
+    <span onclick="toggleOverlay('hidden')">❌</span>
+    <button id="muteBtn">🔊</button>
+    <button id="prevBtn" class="nav-btn" onclick="showPreviousPokemon()">⬅️</button>
+    <button id="nextBtn" class="nav-btn" onclick="showNextPokemon()">➡️</button>
+    <div id="fullCard"></div>
+    </div>
+  </section>
+
+</body>
+
+</html>
