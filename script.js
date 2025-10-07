@@ -19,7 +19,7 @@ async function fetchPokes() {
 
     await loadPokemonDetails(startIndex);
     toggleMute();
-    
+
     if (btn) btn.disabled = false;
 }
 
@@ -36,9 +36,17 @@ function searchPokemon() {
     const query = document.getElementById('searchInput').value.toLowerCase();
     const main = document.getElementById('main');
     main.innerHTML = '';
+        if (query.length === 0) {
+        showAllCachedPokemons();
+        return;
+    }
 
     if (query.length < 3) {
-        showAllCachedPokemons();
+        main.innerHTML = `
+            <p style="text-align:center; font-size:18px; color:#555;">
+                🔍 Suche erst ab drei Buchstaben
+            </p>
+        `;
         return;
     }
 
@@ -46,9 +54,14 @@ function searchPokemon() {
         poke.name.toLowerCase().includes(query)
     );
     if (filtered.length === 0) {
-        main.innerHTML = `<p>Keine Pokémon gefunden 😢</p>`;
+        main.innerHTML = `
+            <p style="text-align:center; font-size:18px; color:#555;">
+                Keine Pokémon gefunden 😢
+            </p>
+        `;
         return;
     }
+
     for (const poke of filtered) {
         if (poke.data) renderCard(poke.data);
     }
