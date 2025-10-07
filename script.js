@@ -6,6 +6,9 @@ let cryAudio = null;
 let currentPokemonIndex = 0;
 
 async function fetchPokes() {
+    const btn = document.getElementById("loadBtn");
+    if (btn) btn.disabled = true;
+
     let pokes = await fetch(url);
     let firstPokemons = await pokes.json();
     url = firstPokemons.next;
@@ -16,6 +19,8 @@ async function fetchPokes() {
 
     await loadPokemonDetails(startIndex);
     toggleMute();
+    
+    if (btn) btn.disabled = false;
 }
 
 async function loadPokemonDetails(startIndex = 0) {

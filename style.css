@@ -60,11 +60,14 @@ main{
   box-shadow: 3px 4px 4px 4px rgba(0,0,0,0.2);
   padding: 20px;
   width: 250px;
+    &:hover{
+    cursor: pointer;
+  }
 }
 
 button[onclick="fetchPokes()"] {
   display: block;
-  margin: 40px auto 100px auto; /* Abstand nach oben/unten, Button zentrieren */
+  margin: 40px auto 100px auto;
   padding: 12px 30px;
   font-size: 18px;
   border: none;
@@ -115,6 +118,19 @@ footer {
   padding: 20px;
   border-radius: 40px;
 }
+#loadBtn:disabled {
+  background-color: #d3d3d3;
+  color: #666;
+  cursor: not-allowed;
+  transform: none; 
+  box-shadow: none;
+}
+
+#loadBtn.loading {
+  background-color: #ccc;
+  cursor: wait;
+}
+
 
 @media (min-width: 700px){
   #fullCard{
