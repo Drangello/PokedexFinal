@@ -41,10 +41,10 @@ function searchPokemon() {
         return;
     }
 
-    if (query.length < 3) {
+    if (query.length < 2) {
         main.innerHTML = `
             <p style="text-align:center; font-size:18px; color:#555;">
-                🔍 Suche erst ab drei Buchstaben
+                🔍 Suche erst ab zwei Buchstaben
             </p>
         `;
         return;
