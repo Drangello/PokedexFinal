@@ -47,6 +47,7 @@ async function fetchPokes() {
         }
 
         url = nextUrl;
+        document.getElementById("loadBtn").removeAttribute("title");
         renderCurrentPokemonView();
     } catch (error) {
         console.error("Pokémon konnten nicht geladen werden:", error);

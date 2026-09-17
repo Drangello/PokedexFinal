@@ -1102,6 +1102,7 @@ body.app-ready .load-actions {
   width: var(--stat-value);
   max-width: 100%;
   height: 100%;
+  display: block;
   border-radius: inherit;
   background: linear-gradient(90deg, color-mix(in srgb, var(--type-1) 72%, #302037 28%), var(--type-1));
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.35);
