@@ -1,40 +1,92 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="de">
 
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Shinydex</title>
-  <script src="script.js"></script>
-  <link rel="icon" type="image/x-icon" href="./abra_icon-icons.com_67592.png">
+  <meta name="theme-color" content="#5a287f">
+  <title>Shinydex – Masterball Pokédex</title>
+  <link rel="icon" type="image/png" href="./abra_icon-icons.com_67592.png">
   <link rel="stylesheet" href="style.css">
+  <script src="script.js" defer></script>
 </head>
 
-<body onload="fetchPokes()">
-  <header>  
-    <input 
-    type="text" 
-    id="searchInput" 
-    placeholder="🔍 Pokémon suchen..." 
-    oninput="searchPokemon()"
-    >
+<body class="initial-loading">
+  <div id="initialLoader" class="masterball-loader" role="status" aria-live="polite">
+    <div class="loader-ball" aria-hidden="true">
+      <div class="loader-half loader-half--top">
+        <span class="masterball-m">M</span>
+      </div>
+      <div class="loader-half loader-half--bottom"></div>
+      <div class="loader-band"></div>
+      <div class="loader-button"><span></span></div>
+    </div>
+    <p class="loader-copy">Pokémon werden geladen …</p>
+  </div>
+
+  <header class="masterball-header">
+    <div class="header-inner">
+      <a class="brand" href="#main" aria-label="Zum Shinydex">
+        <span class="brand-icon"><img src="abra_icon-icons.com_67592.png" alt=""></span>
+        <span>
+          <span class="brand-kicker">Masterball Edition</span>
+          <span class="brand-title">Shinydex</span>
+        </span>
+      </a>
+
+      <label class="search-field" for="searchInput">
+        <span class="search-icon" aria-hidden="true"></span>
+        <span class="visually-hidden">Pokémon suchen</span>
+        <input
+          type="search"
+          id="searchInput"
+          placeholder="Pokémon suchen …"
+          autocomplete="off"
+          spellcheck="false"
+          disabled
+        >
+      </label>
+    </div>
   </header>
 
-  <main id="main">
+  <main id="main" class="card-grid" aria-live="polite" aria-busy="true"></main>
 
-  </main>
-  <button id="loadBtn" onclick="fetchPokes()">LoadMore</button>
-  <footer></footer>
-  <section id="overlay">
-    <div  onclick="event.stopPropagation()">
-    <span onclick="toggleOverlay('hidden')">❌</span>
-    <button id="muteBtn">🔊</button>
-    <button id="prevBtn" class="nav-btn" onclick="showPreviousPokemon()">⬅️</button>
-    <button id="nextBtn" class="nav-btn" onclick="showNextPokemon()">➡️</button>
-    <div id="fullCard"></div>
+  <div class="load-actions">
+    <button id="loadBtn" class="load-button" type="button" disabled>
+      <span class="button-spinner" aria-hidden="true"></span>
+      <span class="load-button-label">Mehr Pokémon laden</span>
+    </button>
+  </div>
+
+  <footer class="masterball-footer">
+    <div class="footer-button" aria-hidden="true"><span></span></div>
+    <p><strong>Shinydex</strong> · Daten von der PokéAPI</p>
+  </footer>
+
+  <section id="overlay" class="overlay" aria-hidden="true" aria-label="Pokémon-Details">
+    <div class="overlay-dialog" role="dialog" aria-modal="true">
+      <div class="overlay-actions">
+        <button id="muteBtn" class="icon-button" type="button" aria-label="Pokémon-Rufe stummschalten">
+          <span aria-hidden="true">🔊</span>
+        </button>
+        <button id="closeBtn" class="icon-button" type="button" aria-label="Detailansicht schließen">
+          <span aria-hidden="true">×</span>
+        </button>
+      </div>
+
+      <button id="prevBtn" class="nav-button nav-button--previous" type="button" aria-label="Vorheriges Pokémon">
+        <span aria-hidden="true">←</span>
+        <span>Zurück</span>
+      </button>
+
+      <div id="fullCard" class="full-card"></div>
+
+      <button id="nextBtn" class="nav-button nav-button--next" type="button" aria-label="Nächstes Pokémon">
+        <span>Nächstes</span>
+        <span aria-hidden="true">→</span>
+      </button>
     </div>
   </section>
-
 </body>
 
 </html>
