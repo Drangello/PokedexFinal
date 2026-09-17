@@ -54,9 +54,12 @@ async function openMasterballForPageEntry() {
 
     const topHalf = loader.querySelector(".loader-half--top");
 
+    window.setGalaxyTension?.(true);
     document.body.classList.add("page-transition-active", "page-transition-entering");
 
     await nextAnimationFrame();
+    window.setGalaxyTension?.(false);
+    window.triggerGalaxyBurst?.();
     loader.classList.add("is-opening");
     await waitForPageTransition(topHalf);
 
@@ -93,6 +96,7 @@ async function closeMasterballForPageExit(destination) {
 
     if (loadingText) loadingText.textContent = "Seite wird gewechselt …";
 
+    window.setGalaxyTension?.(true);
     document.body.classList.add("page-transition-active", "page-transition-leaving");
     loader.getBoundingClientRect();
 
@@ -120,10 +124,13 @@ async function openMasterballAfterHistoryRestore() {
     loader.classList.remove("is-fetching", "is-closing", "is-opening");
     loader.classList.add("is-page-transition");
     loader.hidden = false;
+    window.setGalaxyTension?.(true);
     document.body.classList.add("page-transition-active", "page-transition-entering");
     loader.getBoundingClientRect();
 
     await nextAnimationFrame();
+    window.setGalaxyTension?.(false);
+    window.triggerGalaxyBurst?.();
     loader.classList.add("is-opening");
     await waitForPageTransition(topHalf);
 

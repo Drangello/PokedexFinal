@@ -83,6 +83,7 @@ async function fetchJson(fetchUrl) {
 
 function startInitialMasterballLoading() {
     const loader = document.getElementById("initialLoader");
+    window.setGalaxyTension?.(true);
     loader.classList.add("is-fetching");
     return Promise.resolve();
 }
@@ -94,6 +95,7 @@ function closeMasterballForLoading() {
     const transitionFinished = waitForMasterballTransition(topHalf);
 
     loadingText.textContent = "Weitere Pokémon werden geladen …";
+    window.setGalaxyTension?.(true);
     document.body.classList.add("masterball-active");
     loader.classList.add("is-opening", "is-fetching", "is-closing");
     loader.hidden = false;
@@ -120,6 +122,8 @@ async function openMasterballAfterLoading() {
     const transitionFinished = waitForMasterballTransition(topHalf);
 
     loader.classList.remove("is-fetching", "is-closing");
+    window.setGalaxyTension?.(false);
+    window.triggerGalaxyBurst?.();
     loader.classList.add("is-opening");
     await transitionFinished;
 

@@ -8,11 +8,14 @@
   <title>Shinydex – Masterball Pokédex</title>
   <link rel="icon" type="image/png" href="./abra_icon-icons.com_67592.png">
   <link rel="stylesheet" href="style.css">
+  <script src="galaxy.js" defer></script>
   <script src="page-transition.js"></script>
   <script src="script.js" defer></script>
 </head>
 
 <body class="initial-loading">
+  <canvas id="galaxyCanvas" class="galaxy-canvas" aria-hidden="true"></canvas>
+
   <div id="initialLoader" class="masterball-loader" role="status" aria-live="polite">
     <div class="loader-ball" aria-hidden="true">
       <div class="loader-half loader-half--top">

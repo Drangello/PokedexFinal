@@ -43,15 +43,52 @@ html {
 body {
   min-width: 280px;
   min-height: 100vh;
+  position: relative;
+  isolation: isolate;
   display: flex;
   flex-direction: column;
   color: var(--ink);
-  background:
-    radial-gradient(circle at 10% 32%, rgba(95, 42, 134, 0.045), transparent 25rem),
-    radial-gradient(circle at 92% 78%, rgba(231, 71, 154, 0.04), transparent 23rem),
-    var(--page-white);
+  background: linear-gradient(155deg, #06040c 0%, #0a0613 48%, #10081d 100%);
   font-family: Inter, ui-rounded, "Segoe UI", system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
   overflow-x: hidden;
+}
+
+body::before {
+  content: "";
+  position: fixed;
+  inset: -18%;
+  z-index: -2;
+  pointer-events: none;
+  background:
+    radial-gradient(circle at 18% 24%, rgba(102, 55, 176, 0.24), transparent 30%),
+    radial-gradient(circle at 82% 28%, rgba(210, 55, 150, 0.17), transparent 27%),
+    radial-gradient(circle at 68% 82%, rgba(47, 85, 177, 0.19), transparent 31%),
+    radial-gradient(circle at 14% 78%, rgba(54, 170, 188, 0.085), transparent 25%);
+  opacity: 0.82;
+  transform: translate3d(-1.5%, -1%, 0) scale(1.02);
+  animation: galaxy-nebula-breathe 34s ease-in-out infinite alternate;
+  transition: opacity 520ms ease;
+  will-change: transform;
+}
+
+.galaxy-canvas {
+  width: 100vw;
+  height: 100vh;
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  display: block;
+  pointer-events: none;
+}
+
+body.galaxy-tense::before {
+  opacity: 0.56;
+}
+
+@keyframes galaxy-nebula-breathe {
+  0% { transform: translate3d(-1.5%, -1%, 0) scale(1.02); }
+  50% { transform: translate3d(1.2%, 0.8%, 0) scale(1.055); }
+  100% { transform: translate3d(-0.3%, 1.5%, 0) scale(1.035); }
 }
 
 body.initial-loading,
@@ -96,7 +133,7 @@ a:focus-visible {
   display: grid;
   place-items: center;
   overflow: hidden;
-  background: #f5f2f8;
+  background: rgba(7, 4, 15, 0.84);
   transition: background-color 420ms ease;
 }
 
@@ -328,11 +365,12 @@ a:focus-visible {
   position: absolute;
   bottom: max(4vh, 18px);
   z-index: 6;
-  color: var(--masterball-deep);
+  color: #f4effa;
   font-size: clamp(0.86rem, 2.2vmin, 1.05rem);
   font-weight: 750;
   letter-spacing: 0.12em;
   text-transform: uppercase;
+  text-shadow: 0 2px 12px rgba(8, 4, 14, 0.78);
   transition: opacity 180ms ease;
 }
 
@@ -1501,10 +1539,7 @@ body.masterball-active .masterball-loader.is-opening ~ .load-actions {
 
 /* Legal pages */
 .legal-page {
-  background:
-    radial-gradient(circle at 12% 28%, rgba(95, 42, 134, 0.07), transparent 28rem),
-    radial-gradient(circle at 88% 72%, rgba(231, 71, 154, 0.055), transparent 25rem),
-    var(--page-white);
+  background: linear-gradient(155deg, #06040c 0%, #0a0613 48%, #10081d 100%);
 }
 
 .page-transition-loader {
@@ -1709,13 +1744,22 @@ body.masterball-active .masterball-loader.is-opening ~ .load-actions {
   gap: 10px;
   margin-top: 28px;
   padding: 16px 20px;
+  border: 1px solid rgba(226, 200, 244, 0.16);
+  border-radius: 999px;
   color: #918597;
+  background: rgba(15, 9, 25, 0.72);
+  box-shadow: 0 14px 34px rgba(3, 2, 8, 0.28);
+  backdrop-filter: blur(12px);
   font-size: 0.86rem;
 }
 
 .legal-page-nav a[aria-current="page"] {
   color: var(--masterball-pink);
   text-decoration: none;
+}
+
+.legal-page-nav a {
+  color: #d7b9ed;
 }
 
 .legal-footer {
@@ -1975,5 +2019,10 @@ body.masterball-active .masterball-loader.is-opening ~ .load-actions {
   .loader-band::after,
   .masterball-loader.is-fetching .loader-button {
     animation: none !important;
+  }
+
+  body::before {
+    animation: none !important;
+    transform: none;
   }
 }
