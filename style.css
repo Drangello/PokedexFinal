@@ -56,6 +56,7 @@ body {
 
 body.initial-loading,
 body.masterball-active,
+body.page-transition-active,
 body.overlay-open {
   overflow: hidden;
 }
@@ -379,6 +380,15 @@ a:focus-visible {
 
 .masterball-loader.is-opening .loader-ball::after {
   animation: masterball-rays 480ms cubic-bezier(0.12, 0.74, 0.24, 1) both;
+}
+
+.masterball-loader.is-page-transition.is-closing .loader-half {
+  transition-duration: 820ms;
+  transition-timing-function: cubic-bezier(0.62, 0.02, 0.3, 1);
+}
+
+.masterball-loader.is-page-transition.is-closing .loader-button {
+  transition-delay: 180ms;
 }
 
 @keyframes masterball-rock {
@@ -1495,6 +1505,43 @@ body.masterball-active .masterball-loader.is-opening ~ .load-actions {
     radial-gradient(circle at 12% 28%, rgba(95, 42, 134, 0.07), transparent 28rem),
     radial-gradient(circle at 88% 72%, rgba(231, 71, 154, 0.055), transparent 25rem),
     var(--page-white);
+}
+
+.page-transition-loader {
+  display: none;
+}
+
+.js .page-transition-loader {
+  display: grid;
+}
+
+.js .page-transition-loading .masterball-header,
+.js .page-transition-loading .legal-main,
+.js .page-transition-loading .masterball-footer {
+  opacity: 0;
+  transform: translateY(10px);
+}
+
+.js .page-transition-entering .masterball-header,
+.js .page-transition-entering .legal-main,
+.js .page-transition-entering .masterball-footer {
+  opacity: 1;
+  transform: translateY(0);
+  transition:
+    opacity 620ms ease 720ms,
+    transform 760ms cubic-bezier(0.22, 0.75, 0.24, 1) 680ms;
+}
+
+.page-transition-leaving .masterball-header,
+.page-transition-leaving .card-grid,
+.page-transition-leaving .load-actions,
+.page-transition-leaving .legal-main,
+.page-transition-leaving .masterball-footer {
+  opacity: 0;
+  transform: translateY(8px);
+  transition:
+    opacity 260ms ease,
+    transform 320ms cubic-bezier(0.4, 0, 1, 1);
 }
 
 .legal-header {

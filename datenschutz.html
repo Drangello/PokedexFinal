@@ -9,19 +9,35 @@
   <title>Datenschutz – Shinydex</title>
   <link rel="icon" type="image/png" href="./abra_icon-icons.com_67592.png">
   <link rel="stylesheet" href="./style.css">
+  <script src="./page-transition.js"></script>
 </head>
 
-<body class="legal-page">
+<body class="legal-page page-transition-loading">
+  <div id="pageTransitionLoader" class="masterball-loader page-transition-loader" role="status" aria-live="polite">
+    <div class="loader-ball" aria-hidden="true">
+      <div class="loader-half loader-half--top">
+        <span class="masterball-m">M</span>
+      </div>
+      <div class="loader-half loader-half--bottom"></div>
+      <div class="loader-band"></div>
+      <div class="loader-button">
+        <span class="loader-button-core"></span>
+        <span class="loader-spinner"></span>
+      </div>
+    </div>
+    <p class="loader-copy">Datenschutz wird geöffnet …</p>
+  </div>
+
   <header class="masterball-header legal-header">
     <div class="header-inner">
-      <a class="brand" href="./index.html" aria-label="Zum Shinydex">
+      <a class="brand" href="./index.html" aria-label="Zum Shinydex" data-page-transition>
         <span class="brand-icon"><img src="./abra_icon-icons.com_67592.png" alt=""></span>
         <span>
           <span class="brand-kicker">Masterball Edition</span>
           <span class="brand-title">Shinydex</span>
         </span>
       </a>
-      <a class="legal-back-link" href="./index.html">
+      <a class="legal-back-link" href="./index.html" data-page-transition>
         <span aria-hidden="true">←</span>
         Zurück zum Pokédex
       </a>
@@ -207,9 +223,9 @@
     </article>
 
     <nav class="legal-page-nav" aria-label="Seitennavigation">
-      <a href="./index.html">Pokédex</a>
+      <a href="./index.html" data-page-transition>Pokédex</a>
       <span aria-hidden="true">·</span>
-      <a href="./impressum.html">Impressum</a>
+      <a href="./impressum.html" data-page-transition>Impressum</a>
       <span aria-hidden="true">·</span>
       <a href="./datenschutz.html" aria-current="page">Datenschutz</a>
     </nav>
@@ -220,9 +236,9 @@
     <div class="footer-content">
       <p><strong>Shinydex</strong> · Rechtliche Informationen</p>
       <nav class="footer-links" aria-label="Rechtliche Informationen">
-        <a href="./index.html">Pokédex</a>
+        <a href="./index.html" data-page-transition>Pokédex</a>
         <span aria-hidden="true">·</span>
-        <a href="./impressum.html">Impressum</a>
+        <a href="./impressum.html" data-page-transition>Impressum</a>
         <span aria-hidden="true">·</span>
         <a href="./datenschutz.html" aria-current="page">Datenschutz</a>
       </nav>
