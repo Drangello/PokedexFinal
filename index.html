@@ -19,7 +19,10 @@
       </div>
       <div class="loader-half loader-half--bottom"></div>
       <div class="loader-band"></div>
-      <div class="loader-button"><span></span></div>
+      <div class="loader-button">
+        <span class="loader-button-core"></span>
+        <span class="loader-spinner"></span>
+      </div>
     </div>
     <p class="loader-copy">Pokémon werden geladen …</p>
   </div>
@@ -67,10 +70,16 @@
     <div class="overlay-dialog" role="dialog" aria-modal="true">
       <div class="overlay-actions">
         <button id="muteBtn" class="icon-button" type="button" aria-label="Pokémon-Rufe stummschalten">
-          <span aria-hidden="true">🔊</span>
+          <svg class="action-icon action-icon--sound" viewBox="0 0 24 24" aria-hidden="true">
+            <path class="speaker-shape" d="M4 9v6h4l5 4V5L8 9H4Z"></path>
+            <path class="sound-wave" d="M16 8.4a5 5 0 0 1 0 7.2M18.7 5.8a8.6 8.6 0 0 1 0 12.4"></path>
+            <path class="mute-cross" d="m16.2 9.2 5.6 5.6m0-5.6-5.6 5.6"></path>
+          </svg>
         </button>
         <button id="closeBtn" class="icon-button" type="button" aria-label="Detailansicht schließen">
-          <span aria-hidden="true">×</span>
+          <svg class="action-icon" viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M6.5 6.5 17.5 17.5M17.5 6.5 6.5 17.5"></path>
+          </svg>
         </button>
       </div>
 
