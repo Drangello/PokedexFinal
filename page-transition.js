@@ -1,6 +1,7 @@
 document.documentElement.classList.add("js");
 
 document.addEventListener("DOMContentLoaded", initializePageTransitions);
+window.addEventListener("pageshow", handlePageShow);
 
 function initializePageTransitions() {
     document.querySelectorAll("a[data-page-transition]").forEach((link) => {
@@ -10,6 +11,11 @@ function initializePageTransitions() {
     if (document.body.classList.contains("page-transition-loading")) {
         openMasterballForPageEntry();
     }
+}
+
+function handlePageShow(event) {
+    if (!event.persisted) return;
+    openMasterballAfterHistoryRestore();
 }
 
 function handlePageTransitionClick(event) {
@@ -47,13 +53,12 @@ async function openMasterballForPageEntry() {
     }
 
     const topHalf = loader.querySelector(".loader-half--top");
-    const transitionFinished = waitForPageTransition(topHalf);
 
     document.body.classList.add("page-transition-active", "page-transition-entering");
 
     await nextAnimationFrame();
     loader.classList.add("is-opening");
-    await transitionFinished;
+    await waitForPageTransition(topHalf);
 
     loader.hidden = true;
     document.body.classList.remove(
@@ -91,26 +96,61 @@ async function closeMasterballForPageExit(destination) {
     document.body.classList.add("page-transition-active", "page-transition-leaving");
     loader.getBoundingClientRect();
 
-    const transitionFinished = waitForPageTransition(topHalf);
     loader.classList.add("is-closing");
     loader.classList.remove("is-opening");
 
-    await transitionFinished;
+    await waitForPageTransition(topHalf);
     window.location.assign(destination);
 }
 
-function waitForPageTransition(element) {
-    if (prefersReducedMotion()) return nextAnimationFrame();
+async function openMasterballAfterHistoryRestore() {
+    const loader = document.getElementById("initialLoader")
+        || document.getElementById("pageTransitionLoader");
 
-    return new Promise((resolve) => {
-        const handleTransitionEnd = (event) => {
-            if (event.target !== element || event.propertyName !== "transform") return;
-            element.removeEventListener("transitionend", handleTransitionEnd);
-            resolve();
-        };
+    document.body.classList.remove("page-transition-leaving");
 
-        element.addEventListener("transitionend", handleTransitionEnd);
+    if (!loader || prefersReducedMotion()) {
+        if (loader) loader.hidden = true;
+        document.body.classList.remove("page-transition-active", "page-transition-entering");
+        return;
+    }
+
+    const topHalf = loader.querySelector(".loader-half--top");
+
+    loader.classList.remove("is-fetching", "is-closing", "is-opening");
+    loader.classList.add("is-page-transition");
+    loader.hidden = false;
+    document.body.classList.add("page-transition-active", "page-transition-entering");
+    loader.getBoundingClientRect();
+
+    await nextAnimationFrame();
+    loader.classList.add("is-opening");
+    await waitForPageTransition(topHalf);
+
+    loader.hidden = true;
+    loader.classList.remove("is-page-transition");
+    document.body.classList.remove("page-transition-active", "page-transition-entering");
+}
+
+async function waitForPageTransition(element) {
+    if (prefersReducedMotion()) {
+        await nextAnimationFrame();
+        return;
+    }
+
+    await new Promise((resolve) => requestAnimationFrame(resolve));
+
+    const transformTransition = element.getAnimations().find((animation) => {
+        return animation.transitionProperty === "transform";
     });
+
+    if (!transformTransition) return;
+
+    try {
+        await transformTransition.finished;
+    } catch {
+        // Ein abgebrochener Übergang darf die Navigation nicht blockieren.
+    }
 }
 
 function nextAnimationFrame() {

@@ -1,4 +1,4 @@
-let url = "https://pokeapi.co/api/v2/pokemon?offset=0&limit=20";
+let url = "https://pokeapi.co/api/v2/pokemon?offset=0&limit=40";
 let allLoadedPokemons = [];
 const buttonsInfo = ["statsButton", "evoButton", "infoButton"];
 let isMuted = false;
