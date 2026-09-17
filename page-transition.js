@@ -47,6 +47,7 @@ async function openMasterballForPageEntry() {
     if (!loader) return;
 
     if (prefersReducedMotion()) {
+        window.setGalaxyTension?.(false);
         loader.hidden = true;
         document.body.classList.remove("page-transition-loading");
         return;
@@ -114,6 +115,7 @@ async function openMasterballAfterHistoryRestore() {
     document.body.classList.remove("page-transition-leaving");
 
     if (!loader || prefersReducedMotion()) {
+        window.setGalaxyTension?.(false);
         if (loader) loader.hidden = true;
         document.body.classList.remove("page-transition-active", "page-transition-entering");
         return;
