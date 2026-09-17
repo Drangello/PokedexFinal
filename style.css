@@ -218,6 +218,7 @@ a:focus-visible {
 }
 
 .loader-band {
+  display: none;
   width: calc(100% - clamp(12px, 2.4vmin, 22px));
   height: clamp(8px, 2%, 15px);
   position: absolute;
