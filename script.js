@@ -1,276 +1,501 @@
-let url = `https://pokeapi.co/api/v2/pokemon?offset=0&limit=20`;
+let url = "https://pokeapi.co/api/v2/pokemon?offset=0&limit=20";
 let allLoadedPokemons = [];
-let buttonsInfo = ['evoButton', 'infoButton', 'statsButton'];
+const buttonsInfo = ["statsButton", "evoButton", "infoButton"];
 let isMuted = false;
 let cryAudio = null;
 let currentPokemonIndex = 0;
+let isLoading = false;
+let hasCompletedInitialLoad = false;
+let lastFocusedElement = null;
+
+document.addEventListener("DOMContentLoaded", initializeApp);
+
+function initializeApp() {
+    document.getElementById("searchInput").addEventListener("input", searchPokemon);
+    document.getElementById("loadBtn").addEventListener("click", fetchPokes);
+    document.getElementById("muteBtn").addEventListener("click", toggleMute);
+    document.getElementById("closeBtn").addEventListener("click", () => toggleOverlay(false));
+    document.getElementById("prevBtn").addEventListener("click", showPreviousPokemon);
+    document.getElementById("nextBtn").addEventListener("click", showNextPokemon);
+    document.getElementById("overlay").addEventListener("click", closeOverlayOnBackdrop);
+    document.addEventListener("keydown", handleOverlayKeyboard);
+
+    updateMuteButton();
+    fetchPokes();
+}
 
 async function fetchPokes() {
-    const btn = document.getElementById("loadBtn");
-    if (btn) btn.disabled = true;
+    if (isLoading || !url) return;
 
-    let pokes = await fetch(url);
-    let firstPokemons = await pokes.json();
-    url = firstPokemons.next;
+    const main = document.getElementById("main");
+    const startIndex = allLoadedPokemons.length;
+    isLoading = true;
+    main.setAttribute("aria-busy", "true");
+    setLoadButtonState(true);
 
-    let startIndex = allLoadedPokemons.length;
+    try {
+        const firstPokemons = await fetchJson(url);
+        const nextUrl = firstPokemons.next;
 
-    firstPokemons.results.forEach(pokemon => allLoadedPokemons.push(pokemon));
+        firstPokemons.results.forEach((pokemon) => allLoadedPokemons.push(pokemon));
 
-    await loadPokemonDetails(startIndex);
-    toggleMute();
+        try {
+            await loadPokemonDetails(startIndex);
+        } catch (error) {
+            allLoadedPokemons.splice(startIndex);
+            throw error;
+        }
 
-    if (btn) btn.disabled = false;
+        url = nextUrl;
+        renderCurrentPokemonView();
+    } catch (error) {
+        console.error("Pokémon konnten nicht geladen werden:", error);
+        showLoadError();
+    } finally {
+        isLoading = false;
+        main.setAttribute("aria-busy", "false");
+        setLoadButtonState(false);
+
+        if (!hasCompletedInitialLoad) completeInitialLoad();
+    }
 }
 
 async function loadPokemonDetails(startIndex = 0) {
-    for (let i = startIndex; i < allLoadedPokemons.length; i++) {
-        if (allLoadedPokemons[i].data) continue;
-        let fetchedData = await fetch(allLoadedPokemons[i].url);
-        let singlePokemon = await fetchedData.json();
-        allLoadedPokemons[i].data = singlePokemon;
-        renderCard(singlePokemon);
+    const unloadedPokemons = allLoadedPokemons.slice(startIndex).filter((pokemon) => !pokemon.data);
+
+    await Promise.all(unloadedPokemons.map(async (pokemon) => {
+        pokemon.data = await fetchJson(pokemon.url);
+    }));
+}
+
+async function fetchJson(fetchUrl) {
+    const response = await fetch(fetchUrl);
+    if (!response.ok) throw new Error(`HTTP ${response.status} für ${fetchUrl}`);
+    return response.json();
+}
+
+function completeInitialLoad() {
+    const loader = document.getElementById("initialLoader");
+    const topHalf = loader.querySelector(".loader-half--top");
+    const searchInput = document.getElementById("searchInput");
+    const finishTransition = () => {
+        loader.hidden = true;
+        document.body.classList.remove("initial-loading");
+    };
+
+    hasCompletedInitialLoad = true;
+    searchInput.disabled = false;
+    document.body.classList.add("app-ready");
+    loader.classList.add("is-opening");
+
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+        requestAnimationFrame(finishTransition);
+    } else {
+        topHalf.addEventListener("transitionend", finishTransition, { once: true });
     }
 }
+
+function setLoadButtonState(loading) {
+    const button = document.getElementById("loadBtn");
+    const label = button.querySelector(".load-button-label");
+
+    button.classList.toggle("is-loading", loading);
+    button.disabled = loading || !url;
+    button.setAttribute("aria-busy", String(loading));
+
+    if (loading) label.textContent = "Pokémon werden geladen …";
+    else if (!url) label.textContent = "Alle Pokémon geladen";
+    else label.textContent = "Mehr Pokémon laden";
+}
+
+function showLoadError() {
+    if (allLoadedPokemons.length === 0) {
+        renderMessage("Verbindung fehlgeschlagen", "Die Pokémon konnten nicht geladen werden. Bitte versuche es über den Button erneut.");
+        return;
+    }
+
+    const button = document.getElementById("loadBtn");
+    button.title = "Das Nachladen ist fehlgeschlagen. Bitte erneut versuchen.";
+}
+
 function searchPokemon() {
-    const query = document.getElementById('searchInput').value.toLowerCase();
-    const main = document.getElementById('main');
-    main.innerHTML = '';
-        if (query.length === 0) {
+    renderCurrentPokemonView();
+}
+
+function renderCurrentPokemonView() {
+    const query = document.getElementById("searchInput").value.trim().toLowerCase();
+
+    if (query.length === 0) {
         showAllCachedPokemons();
         return;
     }
 
     if (query.length < 2) {
-        main.innerHTML = `
-            <p style="text-align:center; font-size:18px; color:#555;">
-                🔍 Suche erst ab zwei Buchstaben
-            </p>
-        `;
+        renderMessage("Noch ein Buchstabe", "Die Suche startet ab zwei Buchstaben.");
         return;
     }
 
-    const filtered = allLoadedPokemons.filter(poke =>
-        poke.name.toLowerCase().includes(query)
+    const filteredPokemons = allLoadedPokemons.filter((pokemon) =>
+        pokemon.data && pokemon.name.toLowerCase().includes(query)
     );
-    if (filtered.length === 0) {
-        main.innerHTML = `
-            <p style="text-align:center; font-size:18px; color:#555;">
-                Keine Pokémon gefunden 😢
-            </p>
-        `;
+
+    if (filteredPokemons.length === 0) {
+        renderMessage("Kein Pokémon gefunden", `Für „${query}“ gibt es unter den bereits geladenen Pokémon keinen Treffer.`);
         return;
     }
 
-    for (const poke of filtered) {
-        if (poke.data) renderCard(poke.data);
-    }
+    renderPokemonList(filteredPokemons);
 }
 
 function showAllCachedPokemons() {
-    const main = document.getElementById('main');
-    main.innerHTML = '';
-    for (const poke of allLoadedPokemons) {
-        if (poke.data) renderCard(poke.data);
-    }
+    const cachedPokemons = allLoadedPokemons.filter((pokemon) => pokemon.data);
+    renderPokemonList(cachedPokemons);
 }
 
-async function renderCard(pokemon) {
-    const main = document.getElementById('main');
-    let card = document.createElement('div');
-    card.classList.add('card');
-    card.innerHTML += renderCardTemplate(pokemon);
-    card.addEventListener('click', () => {
-        showFulldetails(pokemon);
+function renderPokemonList(pokemons) {
+    const main = document.getElementById("main");
+    const fragment = document.createDocumentFragment();
+    main.innerHTML = "";
+
+    pokemons.forEach((pokemon) => renderCard(pokemon.data, fragment));
+    main.appendChild(fragment);
+}
+
+function renderMessage(title, message) {
+    const main = document.getElementById("main");
+    const emptyState = document.createElement("p");
+    const heading = document.createElement("strong");
+
+    heading.textContent = title;
+    emptyState.className = "empty-state";
+    emptyState.append(heading, document.createTextNode(message));
+    main.replaceChildren(emptyState);
+}
+
+function renderCard(pokemon, target = document.getElementById("main")) {
+    const card = document.createElement("article");
+    card.className = "card";
+    card.tabIndex = 0;
+    card.setAttribute("role", "button");
+    card.setAttribute("aria-label", `Details zu ${pokemon.name} öffnen`);
+    card.innerHTML = renderCardTemplate(pokemon);
+    applyTypeTheme(card, pokemon);
+
+    card.addEventListener("click", () => showFulldetails(pokemon));
+    card.addEventListener("keydown", (event) => {
+        if (event.key === "Enter" || event.key === " ") {
+            event.preventDefault();
+            showFulldetails(pokemon);
+        }
     });
-    main.appendChild(card);
-}
 
-function showTypes(pokemon) {
-    if (pokemon.types.length > 1) {
-        return `<span style="background-color:var(--${pokemon.types[0].type.name})">${pokemon.types[0].type.name}</span>
-        <span style="background-color:var(--${pokemon.types[1].type.name})">${pokemon.types[1].type.name}</span>`;
-    } else {
-        return `<span style="background-color:var(--${pokemon.types[0].type.name})">${pokemon.types[0].type.name}</span>`;
-    }
-}
-
-function showFulldetails(pokemon) {
-    const overlay = document.getElementById('overlay');
-    overlay.addEventListener('click', () => {
-        toggleOverlay('hidden');
-    });
-    toggleOverlay('visible');
-
-    currentPokemonIndex = allLoadedPokemons.findIndex(p => p.name === pokemon.name);
-    renderpokefullCard(pokemon);
-    addButtonsListeners(pokemon);
-}
-
-function toggleOverlay(state) {
-    let overlay = document.getElementById('overlay');
-    overlay.style.visibility = state;
-    if (cryAudio) cryAudio.pause();
-}
-
-function renderpokefullCard(pokemon) {
-    let fullCard = document.getElementById('fullCard');
-    playCry(pokemon.id);
-    fullCard.innerHTML = '';
-    fullCard.innerHTML += renderCardTemplate(pokemon);
-    fullCard.innerHTML += renderButtons();
-    fullCard.innerHTML += renderInfobox();
-}
-
-async function addButtonsListeners(pokemon) {
-    buttonsInfo.forEach(buttonId => {
-        let button = document.getElementById(buttonId);
-        button.addEventListener('click', async () => {
-            let infobox = document.getElementById('infobox');
-            infobox.innerHTML = '';
-            infobox.innerHTML = await fillInfobox(pokemon, buttonId);
-        });
-    });
-}
-
-async function fillInfobox(pokemon, buttonId) {
-    if (buttonId === 'evoButton') return await getEvolutionLine(pokemon.species.url);
-    else if (buttonId === 'infoButton') return await getPokeInfo(pokemon.species.url);
-    else return showStats(pokemon.stats);
-}
-
-async function getPokeInfo(url) {
-    let result = await fetch(url);
-    let resultJson = await result.json();
-    return resultJson.flavor_text_entries[0].flavor_text.replace("\f", " ");
+    target.appendChild(card);
 }
 
 function renderCardTemplate(pokemon) {
+    const sprite = getShinySprite(pokemon);
+
     return `
-    <div>
-        <h2>${pokemon.name}</h2>
-        <h2>#${pokemon.id}</h2>
-    </div>
-    <img src="${pokemon.sprites.front_shiny}" alt="">
-    <div id="types">
-        ${showTypes(pokemon)}
-    </div>
+        <div class="card-heading">
+            <h2 class="pokemon-name">${escapeHtml(pokemon.name)}</h2>
+            <span class="pokemon-id">${formatPokemonId(pokemon.id)}</span>
+        </div>
+        <img class="pokemon-sprite" src="${sprite}" alt="Shiny ${escapeHtml(pokemon.name)}" loading="lazy">
+        <div class="type-list" aria-label="Pokémon-Typen">
+            ${showTypes(pokemon)}
+        </div>
     `;
 }
 
-function showStats(stats) {
-    return `
-    <table>
-      <tr>
-        <td>Stat Name</td>
-        <td>Value</td>
-      </tr>
-      ${renderTable(stats)}
-    </table>
-    `;
+function showTypes(pokemon) {
+    return pokemon.types.map(({ type }) => {
+        const typeName = getSafeTypeName(type.name);
+        return `<span class="type-badge type-${typeName}">${escapeHtml(type.name)}</span>`;
+    }).join("");
 }
 
-function renderTable(stats) {
-    let container = '';
-    for (let i = 0; i < stats.length; i++) {
-        container += `
-        <tr>
-          <td>${stats[i].stat.name}</td>
-          <td>${stats[i].base_stat}</td>
-        </tr>
-        `;
-    }
-    return container;
+function applyTypeTheme(element, pokemon) {
+    const typeNames = pokemon.types.map(({ type }) => getSafeTypeName(type.name));
+    const firstType = typeNames[0] || "normal";
+    const secondType = typeNames[1] || firstType;
+
+    element.classList.remove("type-single", "type-dual");
+    element.classList.add(typeNames.length > 1 ? "type-dual" : "type-single");
+    element.style.setProperty("--type-1", `var(--${firstType})`);
+    element.style.setProperty("--type-2", `var(--${secondType})`);
+}
+
+function getSafeTypeName(typeName) {
+    const knownTypes = [
+        "normal", "fire", "water", "electric", "grass", "ice", "fighting", "poison", "ground",
+        "flying", "psychic", "bug", "rock", "ghost", "dragon", "dark", "steel", "fairy"
+    ];
+    return knownTypes.includes(typeName) ? typeName : "normal";
+}
+
+function getShinySprite(pokemon) {
+    return pokemon.sprites.front_shiny || pokemon.sprites.front_default || "";
+}
+
+function formatPokemonId(id) {
+    return `#${String(id).padStart(3, "0")}`;
+}
+
+function showFulldetails(pokemon) {
+    lastFocusedElement = document.activeElement;
+    currentPokemonIndex = allLoadedPokemons.findIndex((entry) => entry.name === pokemon.name);
+    renderpokefullCard(pokemon);
+    toggleOverlay(true);
+    document.getElementById("closeBtn").focus();
+}
+
+function renderpokefullCard(pokemon) {
+    const fullCard = document.getElementById("fullCard");
+    fullCard.dataset.pokemonId = String(pokemon.id);
+    fullCard.innerHTML = `
+        <div class="detail-hero">
+            <div class="detail-copy">
+                <span class="detail-id">${formatPokemonId(pokemon.id)}</span>
+                <h2 class="detail-name">${escapeHtml(pokemon.name)}</h2>
+                <div class="type-list" aria-label="Pokémon-Typen">${showTypes(pokemon)}</div>
+            </div>
+            <img class="detail-sprite" src="${getShinySprite(pokemon)}" alt="Shiny ${escapeHtml(pokemon.name)}">
+        </div>
+        <div class="detail-content">
+            ${renderButtons()}
+            ${renderInfobox(pokemon)}
+        </div>
+    `;
+
+    applyTypeTheme(fullCard, pokemon);
+    fullCard.scrollTop = 0;
+    addButtonsListeners(pokemon);
+    updateNavigationButtons();
+    playCry(pokemon);
 }
 
 function renderButtons() {
     return `
-    <div>
-        <button id="statsButton">STATS</button>
-        <button id="evoButton">EVO</button>
-        <button id="infoButton">INFO</button>
-    </div>
+        <div class="detail-tabs" role="tablist" aria-label="Pokémon-Details">
+            <button id="statsButton" class="tab-button is-active" type="button" role="tab" aria-selected="true">Stats</button>
+            <button id="evoButton" class="tab-button" type="button" role="tab" aria-selected="false">Evo</button>
+            <button id="infoButton" class="tab-button" type="button" role="tab" aria-selected="false">Info</button>
+        </div>
     `;
 }
 
-function renderInfobox() {
-    return `<div id="infobox"></div>`;
+function renderInfobox(pokemon) {
+    return `<div id="infobox" class="infobox" role="tabpanel">${showStats(pokemon.stats)}</div>`;
+}
+
+function addButtonsListeners(pokemon) {
+    buttonsInfo.forEach((buttonId) => {
+        const button = document.getElementById(buttonId);
+        button.addEventListener("click", () => openDetailTab(pokemon, buttonId));
+    });
+}
+
+async function openDetailTab(pokemon, buttonId) {
+    const infobox = document.getElementById("infobox");
+    const fullCard = document.getElementById("fullCard");
+    const requestedPokemonId = String(pokemon.id);
+    const tabButtons = buttonsInfo.map((id) => document.getElementById(id));
+
+    tabButtons.forEach((button) => {
+        const isActive = button.id === buttonId;
+        button.classList.toggle("is-active", isActive);
+        button.setAttribute("aria-selected", String(isActive));
+    });
+
+    if (buttonId === "statsButton") {
+        infobox.innerHTML = showStats(pokemon.stats);
+        return;
+    }
+
+    infobox.innerHTML = '<div class="panel-loading">Daten werden geladen …</div>';
+    tabButtons.forEach((button) => { button.disabled = true; });
+
+    try {
+        const content = await fillInfobox(pokemon, buttonId);
+        if (fullCard.dataset.pokemonId === requestedPokemonId) infobox.innerHTML = content;
+    } catch (error) {
+        console.error("Detaildaten konnten nicht geladen werden:", error);
+        if (fullCard.dataset.pokemonId === requestedPokemonId) {
+            infobox.innerHTML = '<p class="panel-error">Diese Detaildaten konnten gerade nicht geladen werden.</p>';
+        }
+    } finally {
+        if (fullCard.dataset.pokemonId === requestedPokemonId) {
+            tabButtons.forEach((button) => { button.disabled = false; });
+        }
+    }
+}
+
+async function fillInfobox(pokemon, buttonId) {
+    if (buttonId === "evoButton") return getEvolutionLine(pokemon.species.url);
+    if (buttonId === "infoButton") return getPokeInfo(pokemon.species.url);
+    return showStats(pokemon.stats);
+}
+
+async function getPokeInfo(speciesUrl) {
+    const species = await fetchJson(speciesUrl);
+    const englishEntry = species.flavor_text_entries.find((entry) => entry.language.name === "en");
+    const fallbackEntry = species.flavor_text_entries[0];
+    const flavorText = (englishEntry || fallbackEntry)?.flavor_text || "Keine Beschreibung verfügbar.";
+    const cleanText = flavorText.replace(/[\f\n\r]+/g, " ");
+
+    return `<p class="info-text">${escapeHtml(cleanText)}</p>`;
+}
+
+function showStats(stats) {
+    return `<div class="stat-list">${renderTable(stats)}</div>`;
+}
+
+function renderTable(stats) {
+    const statLabels = {
+        hp: "HP",
+        attack: "Angriff",
+        defense: "Verteidigung",
+        "special-attack": "Spez.-Angriff",
+        "special-defense": "Spez.-Vert.",
+        speed: "Initiative"
+    };
+
+    return stats.map((stat) => {
+        const statName = stat.stat.name;
+        const value = Number(stat.base_stat) || 0;
+        const percentage = Math.min(100, Math.round((value / 180) * 100));
+
+        return `
+            <div class="stat-row">
+                <span class="stat-name">${statLabels[statName] || escapeHtml(statName)}</span>
+                <span class="stat-number">${value}</span>
+                <span class="stat-track" aria-label="${escapeHtml(statName)}: ${value}">
+                    <span class="stat-fill" style="--stat-value: ${percentage}%"></span>
+                </span>
+            </div>
+        `;
+    }).join("");
 }
 
 async function getEvolutionLine(speciesUrl) {
-    let speciesRes = await fetch(speciesUrl);
-    let species = await speciesRes.json();
-    let chainRes = await fetch(species.evolution_chain.url);
-    let chain = await chainRes.json();
-
-    let evoList = [];
+    const species = await fetchJson(speciesUrl);
+    const chain = await fetchJson(species.evolution_chain.url);
+    const evoList = [];
     let node = chain.chain;
-    if (node) {
-        for (let i = 0; i < 3; i++) {
-            if (node.species) {
-                let speciesName = node.species.name;
-                let pokeRes = await fetch(`https://pokeapi.co/api/v2/pokemon/${speciesName}`);
-                let poke = await pokeRes.json();
 
-                evoList.push({
-                    weight: poke.weight,
-                    name: poke.name,
-                    id: poke.id,
-                    img: poke.sprites.front_shiny
-                });
-
-                node = (node.evolves_to && node.evolves_to[0]) ? node.evolves_to[0] : [];
-            }
-        }
+    for (let stage = 0; node?.species && stage < 3; stage++) {
+        const pokemon = await fetchJson(`https://pokeapi.co/api/v2/pokemon/${node.species.name}`);
+        evoList.push({
+            name: pokemon.name,
+            id: pokemon.id,
+            img: getShinySprite(pokemon)
+        });
+        node = node.evolves_to?.[0];
     }
+
     return renderEvolution(evoList);
 }
 
 function renderEvolution(evoList) {
-    let evoDetails = '';
-    for (let i = 0; i < evoList.length; i++) {
-        evoDetails += `
+    const stages = ["Basis", "Entwicklung", "Final"];
+
+    const evoDetails = evoList.map((pokemon, index) => `
+        ${index > 0 ? '<span class="evo-arrow" aria-hidden="true">→</span>' : ""}
         <div class="evo-item">
-            <div class="evo-stage">${i === 0 ? 'Baby' : i === 1 ? 'Normal' : 'Evolved'}</div>
-            <img class="evo-img" src="${evoList[i].img || ''}" alt="${evoList[i].name || ''}">
-            <div class="evo-name">${evoList[i].name || ''}</div>
-            <div class="evo-id">#${evoList[i].id ?? ''}</div>
-        </div>`;
-    }
+            <span class="evo-stage">${stages[index]}</span>
+            <img class="evo-img" src="${pokemon.img}" alt="Shiny ${escapeHtml(pokemon.name)}">
+            <span class="evo-name">${escapeHtml(pokemon.name)}</span>
+            <span class="evo-id">${formatPokemonId(pokemon.id)}</span>
+        </div>
+    `).join("");
+
     return `<div class="evo-grid">${evoDetails}</div>`;
 }
 
 async function showNextPokemon() {
-    if (currentPokemonIndex < allLoadedPokemons.length - 1) {
-        currentPokemonIndex++;
-        let poke = allLoadedPokemons[currentPokemonIndex];
-        let data = poke.data || await (await fetch(poke.url)).json();
-        renderpokefullCard(data);
-        addButtonsListeners(data);
-    }
+    await navigatePokemon(1);
 }
 
 async function showPreviousPokemon() {
-    if (currentPokemonIndex > 0) {
-        currentPokemonIndex--;
-        let poke = allLoadedPokemons[currentPokemonIndex];
-        let data = poke.data || await (await fetch(poke.url)).json();
-        renderpokefullCard(data);
-        addButtonsListeners(data);
-    }
+    await navigatePokemon(-1);
 }
 
-function playCry(id) {
-    cryAudio = new Audio(`https://raw.githubusercontent.com/PokeAPI/cries/main/cries/pokemon/latest/${id}.ogg`);
-    if (!isMuted) cryAudio.play();
+async function navigatePokemon(direction) {
+    const nextIndex = currentPokemonIndex + direction;
+    if (nextIndex < 0 || nextIndex >= allLoadedPokemons.length) return;
+
+    currentPokemonIndex = nextIndex;
+    const entry = allLoadedPokemons[currentPokemonIndex];
+    const pokemon = entry.data || await fetchJson(entry.url);
+    entry.data = pokemon;
+    renderpokefullCard(pokemon);
+}
+
+function updateNavigationButtons() {
+    document.getElementById("prevBtn").disabled = currentPokemonIndex <= 0;
+    document.getElementById("nextBtn").disabled = currentPokemonIndex >= allLoadedPokemons.length - 1;
+}
+
+function playCry(pokemon) {
+    if (cryAudio) {
+        cryAudio.pause();
+        cryAudio.currentTime = 0;
+    }
+
+    const cryUrl = pokemon.cries?.latest
+        || `https://raw.githubusercontent.com/PokeAPI/cries/main/cries/pokemon/latest/${pokemon.id}.ogg`;
+    cryAudio = new Audio(cryUrl);
+    cryAudio.muted = isMuted;
+
+    if (!isMuted) cryAudio.play().catch(() => {
+        // Manche Browser blockieren Audio, bis der Benutzer mit der Seite interagiert hat.
+    });
 }
 
 function toggleMute() {
-    document.getElementById("muteBtn").addEventListener("click", () => {
-        isMuted = !isMuted;
-        let button = document.getElementById("muteBtn");
-        if (button) {
-            button.textContent = !isMuted ? "🔊" : "🔇";
-        }
-    });
+    isMuted = !isMuted;
+    if (cryAudio) cryAudio.muted = isMuted;
+    updateMuteButton();
+}
+
+function updateMuteButton() {
+    const button = document.getElementById("muteBtn");
+    const icon = button.querySelector("span");
+    icon.textContent = isMuted ? "🔇" : "🔊";
+    button.setAttribute("aria-label", isMuted ? "Pokémon-Rufe einschalten" : "Pokémon-Rufe stummschalten");
+    button.setAttribute("aria-pressed", String(isMuted));
+}
+
+function toggleOverlay(isVisible) {
+    const overlay = document.getElementById("overlay");
+    overlay.classList.toggle("is-visible", isVisible);
+    overlay.setAttribute("aria-hidden", String(!isVisible));
+    document.body.classList.toggle("overlay-open", isVisible);
+
+    if (!isVisible) {
+        if (cryAudio) cryAudio.pause();
+        if (lastFocusedElement instanceof HTMLElement) lastFocusedElement.focus();
+    }
+}
+
+function closeOverlayOnBackdrop(event) {
+    if (event.target === event.currentTarget) toggleOverlay(false);
+}
+
+function handleOverlayKeyboard(event) {
+    const overlayIsOpen = document.getElementById("overlay").classList.contains("is-visible");
+    if (!overlayIsOpen) return;
+
+    if (event.key === "Escape") toggleOverlay(false);
+    if (event.key === "ArrowLeft") showPreviousPokemon();
+    if (event.key === "ArrowRight") showNextPokemon();
+}
+
+function escapeHtml(value) {
+    return String(value)
+        .replaceAll("&", "&amp;")
+        .replaceAll("<", "&lt;")
+        .replaceAll(">", "&gt;")
+        .replaceAll('"', "&quot;")
+        .replaceAll("'", "&#039;");
 }
