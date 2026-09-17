@@ -29,6 +29,9 @@ async function fetchPokes() {
 
     const main = document.getElementById("main");
     const startIndex = allLoadedPokemons.length;
+    const masterballClosed = hasCompletedInitialLoad
+        ? closeMasterballForLoading()
+        : startInitialMasterballLoading();
     isLoading = true;
     main.setAttribute("aria-busy", "true");
     setLoadButtonState(true);
@@ -53,11 +56,14 @@ async function fetchPokes() {
         console.error("Pokémon konnten nicht geladen werden:", error);
         showLoadError();
     } finally {
+        await masterballClosed;
+
+        if (!hasCompletedInitialLoad) await completeInitialLoad();
+        else await openMasterballAfterLoading();
+
         isLoading = false;
         main.setAttribute("aria-busy", "false");
         setLoadButtonState(false);
-
-        if (!hasCompletedInitialLoad) completeInitialLoad();
     }
 }
 
@@ -75,25 +81,66 @@ async function fetchJson(fetchUrl) {
     return response.json();
 }
 
-function completeInitialLoad() {
+function startInitialMasterballLoading() {
+    const loader = document.getElementById("initialLoader");
+    loader.classList.add("is-fetching");
+    return Promise.resolve();
+}
+
+function closeMasterballForLoading() {
     const loader = document.getElementById("initialLoader");
     const topHalf = loader.querySelector(".loader-half--top");
+    const loadingText = loader.querySelector(".loader-copy");
+    const transitionFinished = waitForMasterballTransition(topHalf);
+
+    loadingText.textContent = "Weitere Pokémon werden geladen …";
+    document.body.classList.add("masterball-active");
+    loader.classList.add("is-opening", "is-fetching", "is-closing");
+    loader.hidden = false;
+
+    // Der Layout-Read setzt den geöffneten Startzustand, bevor der Ball zufährt.
+    loader.getBoundingClientRect();
+    loader.classList.remove("is-opening");
+
+    return transitionFinished.finally(() => loader.classList.remove("is-closing"));
+}
+
+async function completeInitialLoad() {
     const searchInput = document.getElementById("searchInput");
-    const finishTransition = () => {
-        loader.hidden = true;
-        document.body.classList.remove("initial-loading");
-    };
 
     hasCompletedInitialLoad = true;
     searchInput.disabled = false;
     document.body.classList.add("app-ready");
-    loader.classList.add("is-opening");
+    await openMasterballAfterLoading();
+}
 
+async function openMasterballAfterLoading() {
+    const loader = document.getElementById("initialLoader");
+    const topHalf = loader.querySelector(".loader-half--top");
+    const transitionFinished = waitForMasterballTransition(topHalf);
+
+    loader.classList.remove("is-fetching", "is-closing");
+    loader.classList.add("is-opening");
+    await transitionFinished;
+
+    loader.hidden = true;
+    document.body.classList.remove("initial-loading", "masterball-active");
+}
+
+function waitForMasterballTransition(element) {
     if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
-        requestAnimationFrame(finishTransition);
-    } else {
-        topHalf.addEventListener("transitionend", finishTransition, { once: true });
+        return new Promise((resolve) => requestAnimationFrame(resolve));
     }
+
+    return new Promise((resolve) => {
+        const handleTransitionEnd = (event) => {
+            if (event.target !== element || event.propertyName !== "transform") return;
+            element.removeEventListener("transitionend", handleTransitionEnd);
+            resolve();
+        };
+
+        element.addEventListener("transitionend", handleTransitionEnd);
+    });
 }
 
 function setLoadButtonState(loading) {
@@ -461,8 +508,6 @@ function toggleMute() {
 
 function updateMuteButton() {
     const button = document.getElementById("muteBtn");
-    const icon = button.querySelector("span");
-    icon.textContent = isMuted ? "🔇" : "🔊";
     button.setAttribute("aria-label", isMuted ? "Pokémon-Rufe einschalten" : "Pokémon-Rufe stummschalten");
     button.setAttribute("aria-pressed", String(isMuted));
 }
